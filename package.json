@@ -1,0 +1,12 @@
+{
+  "name": "steno-tutor",
+  "version": "1.0.0",
+  "description": "Lernprogramm für die Deutsche Einheitskurzschrift (DEK) – Verkehrsschrift nach der Wiener Urkunde",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "npx http-server . -p 8080 -c-1",
+    "test": "node tests/engine.test.js && node tests/recognizer.test.js"
+  },
+  "license": "MIT"
+}
