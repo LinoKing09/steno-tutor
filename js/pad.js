@@ -2,7 +2,7 @@
 // Speichert die Striche in Stufen-Koordinaten (y nach oben, Grundlinie = 0),
 // damit sie unabhängig von der Bildschirmgröße mit den Sollformen verglichen werden können.
 
-import { layoutWord } from './steno/layout.js';
+import { layoutFor } from './steno/keys.js';
 
 const PAD_TOP = 0.75; // Luft über der Obergrenze (in Stufen)
 const PAD_BOTTOM = 0.75;
@@ -248,7 +248,7 @@ export class StenoPad {
   }
 
   setGuide(word) {
-    this.guide = word ? { word, layout: layoutWord(word) } : null;
+    this.guide = word ? { word, layout: layoutFor(word) } : null;
     this.redraw();
   }
 
@@ -259,7 +259,7 @@ export class StenoPad {
       this.redraw();
       return;
     }
-    const layout = layoutWord(word);
+    const layout = layoutFor(word);
     const own = this.rowStrokes(row).flat();
     const ownMin = own.length ? Math.min(...own.map((p) => p.x)) : 0.6;
     this.solution = { layout, row, offsetX: ownMin - layout.bbox.minX };

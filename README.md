@@ -11,9 +11,44 @@ Bescheid mit Rechtsbehelfsbelehrung). Das „Bundesamt für Kurzschriftwesen“ 
 
 ## Funktionen
 
+### Aufbau der Lerneinheiten
+
+Jede Lerneinheit führt nur wenige neue Zeichen oder eine neue Regel ein und verwendet in den Übungen
+ausschließlich bereits Gelerntes (Lerneinheit 1: **b, r, t** und das **e** – Wörter wie *Bett, Rebe,
+Erbe, Teer*; Lerneinheit 2: **n, d**; …). Der Lernweg ist in jeder Einheit gleich:
+
+1. **Lehrstoff** – die neuen Zeichen mit Beschreibung und Schreibanimation
+2. **Zeichen üben** – jedes Zeichen einzeln: erst nachspuren, dann aus dem Gedächtnis schreiben
+3. **Wörter bilden** – Baukasten (Zeichen + Verbindung = Wort), dann Wörter nachspuren
+4. **Schreiben** · 5. **Lesen** · 6. **Hördiktat** · 7. **Prüfung** mit Bescheid
+
+| Nr. | Neu |
+|---|---|
+| 1 | b, r, t · e (eng, am Wortende, am Wortanfang) |
+| 2 | n, d |
+| 3 | tr, br (Vergrößerung = + r) · nd |
+| 4 | s, ss/ß, l |
+| 5 | k, g, h |
+| 6 | m, w |
+| 7 | o (weite Verbindung) |
+| 8 | a (Verstärkung) · ng |
+| 9 | i, ei (Hochstellung) |
+| 10 | u, eu, au (Tiefstellung) |
+| 11 | ö, ü (ä, äu) |
+| 12 | f, p, v, j |
+| 13 | ch, cht, sch, z |
+| 14 | x, qu · st, sp, str, spr |
+| 15 | dr, fr, gr, kr, pr, wr, zr, cr |
+| 16 | schm, schn, schr, schw, zw, mp, mpf, pf, pfr, rd, rdr, ndr, rr, rs |
+| 17 | Selbstlaute am Wortanfang und -ende |
+| 18 | Kürzel I (der, die, das, und, ist …) |
+| 19 | Kürzel II, ge-, ver-, -ung |
+
+### Bereiche
+
 | Bereich | Richtung | Beschreibung |
 |---|---|---|
-| **Lerneinheiten** (12) | – | Lehrstoff, Zeichentafel, Übungen und Prüfung mit Bescheid |
+| **Lerneinheiten** (19) | – | erst Zeichen lernen und einzeln üben, dann daraus Wörter bilden; Prüfung mit Bescheid |
 | Nachspuren | Vorlage → Stift | Sollform im Schreibfeld nachfahren |
 | Schreiben | Text → Kurzschrift | Wort mit Stift schreiben, automatische Bewertung |
 | Lesen | Kurzschrift → Text | Ankreuzen oder Freitext |

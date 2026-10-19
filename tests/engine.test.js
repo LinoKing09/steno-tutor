@@ -1,7 +1,8 @@
 // Prüft Engine und Lehrplan: node tests/engine.test.js
 import assert from 'node:assert/strict';
-import { LESSONS, allWords } from '../js/lessons.js';
-import { parseWord, normalize } from '../js/steno/parser.js';
+import { LESSONS, allWords, drillKeys } from '../js/lessons.js';
+import { layoutFor } from '../js/steno/keys.js';
+import { parseWord, normalize, KUERZEL } from '../js/steno/parser.js';
 import { layoutWord } from '../js/steno/layout.js';
 import { wordSvg, textSvg } from '../js/steno/render.js';
 import { GLYPHS } from '../js/steno/glyphs.js';
@@ -70,6 +71,24 @@ check('Lehrplan-Reihenfolge', () => {
       }
     }
   }
+});
+
+// 3b. Aufbau: erst Zeichen, dann Wörter; keine Kürzel vor der Kürzel-Lektion
+check('Aufbau der Lerneinheiten', () => {
+  assert.deepEqual(LESSONS[0].zeichen, ['b', 'r', 't'], 'Lerneinheit 1 beginnt mit b, r, t');
+  assert.deepEqual(LESSONS[0].vokale, ['e']);
+  const firstKz = LESSONS.findIndex((l) => l.kuerzel);
+  LESSONS.forEach((l, i) => {
+    assert.equal(l.nr, i + 1, `${l.id}: Nummer`);
+    assert.ok(l.woerter.length >= 8, `${l.id}: mindestens 8 Übungswörter`);
+    assert.ok(l.zeichen.length + l.vokale.length + (l.kuerzel || []).length > 0, `${l.id}: bringt nichts Neues`);
+    for (const k of drillKeys(l)) assert.ok(layoutFor(k).strokes.length, `${l.id}: Übungszeichen ${k}`);
+    if (i < firstKz) for (const w of l.woerter) assert.ok(!KUERZEL[w.toLowerCase()], `${l.id}: „${w}“ ist ein Kürzel`);
+    // jede neue Regel bzw. jedes neue Zeichen kommt in den Übungswörtern vor
+    const used = new Set(l.woerter.flatMap((w) => parseWord(w).items.flatMap((it) => [it.g, it.vowel, it.final])));
+    for (const g of l.zeichen) if (!['ung'].includes(g)) assert.ok(used.has(g) || ['cr', 'zr', 'wr', 'rdr', 'ndr', 'mpf', 'pfr', 'rs', 'schn', 'schm'].includes(g), `${l.id}: Zeichen ${g} kommt in keinem Übungswort vor`);
+    for (const v of l.vokale) if (!['ä', 'äu'].includes(v)) assert.ok(used.has(v), `${l.id}: Selbstlaut ${v} kommt in keinem Übungswort vor`);
+  });
 });
 
 // 4. Alle Wörter und Sätze lassen sich fehlerfrei setzen

@@ -23,7 +23,7 @@ async function newPage(viewport, opts = {}) {
 // Zeichnet die Sollform eines Wortes (leicht verzittert) ins erste Schreibfeld
 async function writeWord(page, word, { jitter = 0.03, dx = 1.2 } = {}) {
   const box = await page.locator('.pad-canvas').first().boundingBox();
-  const strokes = await page.evaluate((w) => window.stenoTutor.layoutWord(w).strokes.map((s) => s.pts.map((p) => [p.x, p.y])), word);
+  const strokes = await page.evaluate((w) => window.stenoTutor.layoutFor(w).strokes.map((s) => s.pts.map((p) => [p.x, p.y])), word);
   const S = Math.max(28, Math.min(56, box.width / 16));
   const base = box.y + 2.75 * S;
   for (const s of strokes) {
@@ -46,15 +46,38 @@ await page.goto(BASE + '#/', { waitUntil: 'networkidle' });
 assert((await page.locator('h1').first().textContent()).includes('Willkommen'), 'Startseite lädt');
 
 await page.goto(BASE + '#/lektion/l1', { waitUntil: 'networkidle' });
-assert(await page.locator('.wortkarte').count() > 3, 'Lehrstoff mit Beispielkarten');
+assert((await page.locator('.lernweg').textContent()).includes('Zeichen üben'), 'Lehrstoff zeigt den Lernweg');
 await page.screenshot({ path: `${out}/l1-lehrstoff.png`, fullPage: true });
 
-await page.goto(BASE + '#/lektion/l3/zeichen');
-await page.waitForTimeout(300);
-assert(await page.locator('.zeichenkarte').count() === 6, 'Zeichentafel Lektion 3 zeigt 6 Zeichen');
+assert((await page.locator('.zeichenkarte figcaption b').allTextContents()).join(',') === 'b,r,t,e am Wortende', 'Lerneinheit 1 führt b, r, t und e ein');
+
+// Zeichen üben: erst nachspuren, dann dasselbe Zeichen frei schreiben
+await page.goto(BASE + '#/lektion/l1/zeichen');
+await page.waitForSelector('.pad-canvas');
+assert((await page.locator('.auftrag').textContent()).includes('nachspuren') || (await page.locator('.auftrag').textContent()).includes('Spuren'), 'Zeichenübung beginnt mit Nachspuren');
+let key = await page.evaluate(() => window.__letzteAufgabe);
+assert(key === '#b', 'erstes Übungszeichen ist b');
+await writeWord(page, key);
+await page.click('text=Prüfen lassen');
+await page.waitForSelector('.bescheidchen');
+assert((await page.locator('.bescheidchen').textContent()).includes('ANERKANNT'), 'b nachgespurt und anerkannt');
+await page.click('text=Nächster Vorgang');
+await page.waitForSelector('.pad-canvas');
+assert((await page.locator('.auftrag').textContent()).includes('aus dem Gedächtnis') && (await page.evaluate(() => window.__letzteAufgabe)) === '#b', 'danach b aus dem Gedächtnis');
+await writeWord(page, '#t');
+await page.click('text=Prüfen lassen');
+await page.waitForSelector('.bescheidchen');
+assert((await page.locator('.bescheidchen').textContent()).includes('NACHBESSERN'), 't statt b wird zurückgewiesen');
+await page.screenshot({ path: `${out}/l1-zeichen.png`, fullPage: true });
+
+// Wörter bilden: Baukasten
+await page.goto(BASE + '#/lektion/l1/woerter');
+await page.waitForSelector('.baukasten');
+assert(await page.locator('.baukasten').count() === 4, 'Baukasten zeigt vier Beispielwörter');
+await page.screenshot({ path: `${out}/l1-woerter.png`, fullPage: true });
 
 // Schreibübung: richtiges Wort schreiben
-await page.goto(BASE + '#/lektion/l4/schreiben');
+await page.goto(BASE + '#/lektion/l7/schreiben');
 await page.waitForSelector('.pad-canvas');
 let target = (await page.locator('.zielwort').first().textContent()).trim();
 await writeWord(page, target);
@@ -62,13 +85,13 @@ await page.click('text=Prüfen lassen');
 await page.waitForSelector('.bescheidchen');
 let txt = await page.locator('.bescheidchen').textContent();
 assert(txt.includes('ANERKANNT'), `Schreibübung: „${target}“ korrekt geschrieben wird anerkannt`);
-await page.screenshot({ path: `${out}/l4-schreiben.png`, fullPage: true });
+await page.screenshot({ path: `${out}/l7-schreiben.png`, fullPage: true });
 
 // falsches Wort schreiben
 await page.click('text=Nächster Vorgang');
 await page.waitForSelector('.pad-canvas');
 target = (await page.locator('.zielwort').first().textContent()).trim();
-const wrong = target === 'Tor' ? 'Hand' : 'Tor';
+const wrong = target === 'Tor' ? 'Rose' : 'Tor';
 await writeWord(page, wrong);
 await page.click('text=Prüfen lassen');
 await page.waitForSelector('.bescheidchen');
@@ -147,9 +170,9 @@ for (const r of ['lektionen', 'zeichentafel', 'akte', 'hilfe', 'lesesaal']) {
 
 // iPad hochkant mit Touch
 const ipad = await newPage({ width: 820, height: 1180 }, { touch: true });
-await ipad.goto(BASE + '#/lektion/l5/nachspuren', { waitUntil: 'networkidle' });
+await ipad.goto(BASE + '#/lektion/l9/woerter', { waitUntil: 'networkidle' });
 await ipad.waitForSelector('.pad-canvas');
-await ipad.screenshot({ path: `${out}/ipad-nachspuren.png`, fullPage: true });
+await ipad.screenshot({ path: `${out}/ipad-woerter.png`, fullPage: true });
 const overflow = await ipad.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
 assert(!overflow, 'iPad hochkant: kein waagerechtes Scrollen');
 

@@ -1,6 +1,6 @@
 // Lokale Aktenführung: Lernfortschritt im Browser (localStorage), mit Rückfall auf Arbeitsspeicher.
 
-const KEY = 'steno-tutor-akte-v1';
+const KEY = 'steno-tutor-akte-v2'; // v2: neuer, feiner gegliederter Lehrplan
 let memory = null;
 
 function blank() {

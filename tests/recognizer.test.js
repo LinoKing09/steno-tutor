@@ -1,7 +1,7 @@
 // Kalibrierung der Handschrifterkennung mit künstlich verzerrten Sollformen:
 // node tests/recognizer.test.js
-import { LESSONS } from '../js/lessons.js';
-import { layoutWord } from '../js/steno/layout.js';
+import { LESSONS, drillKeys, drillKeysUpTo } from '../js/lessons.js';
+import { layoutFor } from '../js/steno/keys.js';
 import { grade, compare, segmentWords } from '../js/recognizer.js';
 
 let seed = 42;
@@ -10,7 +10,7 @@ const gauss = () => Math.sqrt(-2 * Math.log(rnd() + 1e-9)) * Math.cos(2 * Math.P
 
 // „Handschrift“: Sollform mit Größen-, Neigungs-, Lage- und Zitterabweichungen
 function scribble(word, level = 1) {
-  const l = layoutWord(word);
+  const l = layoutFor(word);
   const s = 1 + (rnd() - 0.5) * 0.24 * level;
   const shear = (rnd() - 0.5) * 0.2 * level;
   const dy = (rnd() - 0.5) * 0.3 * level;
@@ -47,6 +47,22 @@ for (const lesson of LESSONS) {
     }
   }
 }
+// Einzelzeichen-Übungen: Zeichen unter den bis dahin gelernten Zeichen erkennen
+let zOk = 0, zTotal = 0;
+const zFehler = [];
+for (const lesson of LESSONS) {
+  const pool = drillKeysUpTo(lesson.nr);
+  for (const key of drillKeys(lesson)) {
+    for (let k = 0; k < 3; k++) {
+      const g = grade(scribble(key, +(process.env.LEVEL || 1)), key, pool);
+      zTotal++;
+      if (g.ok) zOk++;
+      else zFehler.push(`${key}→${g.confusedWith || '?'}`);
+    }
+  }
+}
+console.log(`Einzelzeichen richtig erkannt: ${zOk}/${zTotal} (${((100 * zOk) / zTotal).toFixed(1)} %)${zFehler.length ? ' – verwechselt: ' + zFehler.join(', ') : ''}`);
+
 const q = (arr, p) => arr.slice().sort((a, b) => a - b)[Math.floor(p * (arr.length - 1))].toFixed(3);
 console.log(`Richtig erkannt: ${ok}/${total} (${((100 * ok) / total).toFixed(1)} %)`);
 console.log(`Fälschlich akzeptiert: ${falseAccept}/${wrongTotal} (${((100 * falseAccept) / wrongTotal).toFixed(1)} %)`);
@@ -56,7 +72,7 @@ console.log(`Abstand falsch:  10 % ${q(dWrong, 0.1)}, Median ${q(dWrong, 0.5)}`)
 const segs = segmentWords([...scribble('Haus'), ...scribble('Tor').map((s) => s.map((p) => ({ x: p.x + 6, y: p.y })))]);
 console.log('Segmentierung (2 erwartet):', segs.length);
 
-if (ok / total < 0.85 || falseAccept / wrongTotal > 0.05 || segs.length !== 2) {
+if (ok / total < 0.85 || zOk / zTotal < 0.85 || falseAccept / wrongTotal > 0.05 || segs.length !== 2) {
   console.error('Erkennungsgüte unzureichend.');
   process.exit(1);
 }

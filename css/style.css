@@ -411,3 +411,27 @@ details summary { cursor: pointer; padding: 6px 0; font-weight: bold; min-height
   .titelleiste { display: none; }
   .fensterinhalt { border: none; }
 }
+
+/* Lernweg, Baukasten */
+.lernweg { background: #fffbe0; border: 1px solid #b39500; padding: 6px 10px; font-size: 13px; margin-bottom: 8px; }
+.reiter .schrittnr {
+  display: inline-block; min-width: 18px; height: 18px; line-height: 18px; margin-right: 5px; border-radius: 50%;
+  background: #000; color: var(--gold); font-size: 11px; font-weight: bold; text-align: center;
+}
+.reiter a.aktiv .schrittnr { background: var(--rot); color: #fff; }
+.weiterzeile { margin-top: 14px; text-align: right; }
+.baukasten {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 10px; margin: 6px 0;
+  background: var(--papier); border: 1px solid #b7b19a; cursor: pointer;
+}
+.baukasten:hover, .baukasten:focus-visible { border-color: var(--rot); outline: none; }
+.baukasten .teile { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.baukasten .teil { margin: 0; text-align: center; background: #fff; border: 1px solid #ddd; padding: 2px 4px; }
+.baukasten .teil figcaption { font-size: 11px; }
+.baukasten .plus, .baukasten .gleich { font-weight: bold; font-size: 20px; color: var(--rot); }
+.baukasten .gleich { font-size: 26px; margin: 0 4px; }
+.verbindung { display: inline-flex; flex-direction: column; align-items: center; padding: 3px 8px; border: 1px solid #000; background: var(--gold); border-radius: 10px; line-height: 1.2; }
+.verbindung small { font-size: 10px; }
+.verbindung.leer { background: #eee; border-style: dashed; }
+.ergebnisbild { margin: 0; text-align: center; }
+.zielwort + small { display: block; width: 100%; color: #444; }
