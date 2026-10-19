@@ -88,9 +88,10 @@ node tests/e2e.mjs # Durchklick-Test im Browser (benötigt Playwright, Server mu
 
 ### Veröffentlichung
 
-Der Workflow `.github/workflows/pages.yml` prüft jeden Push und veröffentlicht den Stand von `main`
-auf GitHub Pages. Dazu einmalig unter *Settings → Pages → Build and deployment* die Quelle
-**GitHub Actions** wählen.
+Öffentlich erreichbar unter **https://linoking09.github.io/steno-tutor/**
+
+Der Workflow `.github/workflows/pages.yml` prüft jeden Push. Nach bestandenen Tests wird der Stand von
+`main` auf den Zweig `gh-pages` kopiert, aus dem GitHub Pages die Seite ausliefert.
 
 ## Quellen
 
