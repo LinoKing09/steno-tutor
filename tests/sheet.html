@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="de"><head><meta charset="utf-8"><title>Zeichenprüfung</title>
+<style>
+body{font-family:Verdana;background:#fff;margin:10px}
+.cell{display:inline-block;border:1px solid #ccc;margin:3px;text-align:center;font-size:12px;vertical-align:top}
+.steno-lines line{stroke:#9ab;stroke-width:1}
+.steno-lines line.grund{stroke:#456;stroke-width:1.5}
+.steno-lines line.grenze,.steno-lines line.ober{stroke-dasharray:3 3}
+.ink{fill:none;stroke:#000;stroke-linecap:round;stroke-linejoin:round}
+.ink-fill{fill:#000}
+</style></head><body>
+<div id="g"></div><hr><div id="w"></div><hr><div id="t"></div>
+<script type="module">
+import { GLYPHS, URKUNDE_ORDER } from '../js/steno/glyphs.js';
+import { layoutGlyph } from '../js/steno/layout.js';
+import { wordSvg, glyphSvg, textSvg } from '../js/steno/render.js';
+import { explain } from '../js/steno/parser.js';
+const ids = URKUNDE_ORDER.concat(Object.keys(GLYPHS).filter(k=>!URKUNDE_ORDER.includes(k)));
+document.getElementById('g').innerHTML = ids.map(id => `<div class="cell">${glyphSvg(layoutGlyph(id),{scale:34})}<br>${id}</div>`).join('');
+const words = (new URLSearchParams(location.search).get('w') || 'Bete,Beet,Tote,Rede,Note,Nase,Lied,Gut,Haus,Leute,Mann,Kind,Schule,Stein,Straße,Bundestag,Ordnung,gesagt,Verwaltung,Ende,Ofen,Igel,Abend,Uhr,Wasser,lesen,Kurzschrift,Präsident,Abgeordnete,Sitzung,Protokoll,Fraktion').split(',');
+document.getElementById('w').innerHTML = words.map(w => `<div class="cell">${wordSvg(w,{scale:34})}<br>${w}<br><small>${explain(w)}</small></div>`).join('');
+document.getElementById('t').innerHTML = textSvg('Der Präsident ist im Bundestag und die Sitzung ist eröffnet.', {scale:26, maxWidth:34});
+document.body.dataset.ready = '1';
+</script></body></html>

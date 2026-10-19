@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lernportal Kurzschrift</title>
+<meta name="description" content="Lernprogramm für die Deutsche Einheitskurzschrift (Verkehrsschrift nach der Wiener Urkunde) – mit Apple Pencil und S-Pen, Hördiktat und Übertragung Text ↔ Kurzschrift.">
+<meta name="theme-color" content="#000000">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Kurzschrift">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="img/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="img/icon-180.png">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<a class="sprungmarke" href="#inhalt">Zum Inhalt springen</a>
+<div id="seite">
+  <div class="flagge" aria-hidden="true"><i></i><i></i><i></i></div>
+
+  <header id="kopf">
+    <table class="kopftabelle" role="presentation">
+      <tr>
+        <td class="siegel-zelle">
+          <svg class="siegel" viewBox="0 0 100 100" aria-hidden="true">
+            <defs><path id="kreisbahn" d="M50,50 m-36,0 a36,36 0 1,1 72,0 a36,36 0 1,1 -72,0"/></defs>
+            <circle cx="50" cy="50" r="47" fill="#FFCE00" stroke="#000" stroke-width="3"/>
+            <circle cx="50" cy="50" r="27" fill="#fff" stroke="#DD0000" stroke-width="2.5"/>
+            <text font-family="Verdana, sans-serif" font-size="8.6" font-weight="bold" letter-spacing="1.2"><textPath href="#kreisbahn">BUNDESAMT · FÜR · KURZSCHRIFTWESEN ·</textPath></text>
+            <path d="M38 66 C 44 50, 56 36, 66 30 C 62 40, 54 52, 42 64 Z" fill="#000"/>
+            <path d="M38 66 L 35 72" stroke="#000" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M44 60 C 50 52 56 44 62 36" stroke="#FFCE00" stroke-width="1"/>
+          </svg>
+        </td>
+        <td>
+          <div class="behoerde">Bundesamt für Kurzschriftwesen</div>
+          <div class="referat">Referat K 3 · Verkehrsschrift · Lernportal der Deutschen Einheitskurzschrift</div>
+        </td>
+        <td class="kopf-rechts">
+          <div>Stand: <span id="heute"></span></div>
+          <div class="kopf-links"><a href="#/hilfe">Barrierearm</a> | <a href="#/hilfe">Einstellungen</a> | <a href="#/hilfe">Hilfe</a></div>
+        </td>
+      </tr>
+    </table>
+  </header>
+
+  <div class="ticker" aria-label="Amtliche Mitteilungen">
+    <div class="ticker-band">
+      <span>+++ Amtliche Mitteilung: Die Verkehrsschrift erreicht 80 bis 120 Silben in der Minute +++</span>
+      <span>+++ Hinweis: Ein formeller Antrag auf Freischaltung der Lerneinheiten ist nicht erforderlich +++</span>
+      <span>+++ Neu: Schreiben mit Apple Pencil und S-Pen, inklusive Handballen-Erkennung +++</span>
+      <span>+++ Öffnungszeiten der Schreibstube: rund um die Uhr, auch an Feiertagen +++</span>
+    </div>
+  </div>
+
+  <div class="pfad">Sie befinden sich hier: <a href="#/">Startseite</a> » <span id="brotkrumen">Startseite</span></div>
+
+  <div id="rumpf">
+    <nav id="navi" aria-label="Hauptnavigation">
+      <div class="navkopf">Navigation</div>
+      <a href="#/">Startseite</a>
+      <a href="#/lektionen">Lerneinheiten</a>
+      <a href="#/zeichentafel">Zeichentafel</a>
+      <div class="navkopf">Dienststellen</div>
+      <a href="#/uebersetzer">Übertragungsstelle<small>Text/Sprache → Kurzschrift</small></a>
+      <a href="#/lesesaal">Lesesaal<small>Kurzschrift → Text</small></a>
+      <a href="#/schreibstube">Schreibstube<small>Handschrift → Text</small></a>
+      <div class="navkopf">Verwaltung</div>
+      <a href="#/akte">Meine Akte</a>
+      <a href="#/hilfe">Hilfe &amp; Einstellungen</a>
+    </nav>
+
+    <main id="inhalt" tabindex="-1"></main>
+
+    <aside id="rand" aria-label="Informationen">
+      <div class="randkasten">
+        <div class="randkopf">Ihre Akte</div>
+        <div id="rand-akte"></div>
+        <a href="#/akte" class="knopf klein">Akte einsehen</a>
+      </div>
+      <div class="randkasten">
+        <div class="randkopf">Wartemarke</div>
+        <div class="wartemarke">Nr. <b>0815</b><br><small>Sie werden sofort bedient.</small></div>
+      </div>
+      <div class="randkasten">
+        <div class="randkopf">Besucherzähler</div>
+        <div id="zaehler" class="zaehlwerk"></div>
+        <small>seit Inbetriebnahme</small>
+      </div>
+      <div class="randkasten plaketten">
+        <span class="plakette">Optimiert für 1024×768</span>
+        <span class="plakette gelb">Tablet-tauglich</span>
+        <span class="plakette rot">Stift-geprüft</span>
+        <span class="plakette">HTML 4.01*</span>
+        <small>* sinngemäß</small>
+      </div>
+      <div class="baustelle" aria-hidden="true">Im Aufbau seit 1924</div>
+    </aside>
+  </div>
+
+  <footer id="fuss">
+    <div class="fusslinks"><a href="#/hilfe">Impressum</a> | <a href="#/hilfe">Datenschutz</a> | <a href="#/hilfe">Barrierefreiheit</a> | <a href="#/zeichentafel">Sitemap</a> | <a href="#/akte">Kontakt</a></div>
+    <div>Lernportal Kurzschrift · Grundlage: Systemurkunde der Deutschen Einheitskurzschrift (Wiener Urkunde, 1968)</div>
+    <div class="klein">Das „Bundesamt für Kurzschriftwesen“ ist frei erfunden. Kein Angebot einer Behörde der Bundesrepublik Deutschland. Alle Daten bleiben in Ihrem Browser.</div>
+  </footer>
+</div>
+<noscript><p class="hinweis">Für dieses Lernportal muss JavaScript aktiviert sein.</p></noscript>
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
