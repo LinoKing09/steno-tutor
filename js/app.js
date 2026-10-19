@@ -1,11 +1,12 @@
 // Lernportal Kurzschrift – Seitensteuerung
 import { h, add, put, esc, stamp, fenster, knopf, toast, heute, shuffle } from './ui.js';
-import { LESSONS, lessonById, wordsUpTo, allWords } from './lessons.js';
+import { LESSONS, lessonById, wordsUpTo, allWords, drillKeys, drillKeysUpTo } from './lessons.js';
 import { wordSvg, textSvg, glyphSvg } from './steno/render.js';
 import { layoutGlyph, layoutText, layoutWord } from './steno/layout.js';
-import { GLYPHS, URKUNDE_ORDER } from './steno/glyphs.js';
+import { GLYPHS, URKUNDE_ORDER, DESC, FINAL_DESC } from './steno/glyphs.js';
 import { explain, KUERZEL, VOWEL_RULES, parseWord } from './steno/parser.js';
-import { practice, exam, TYPES, sameSteno } from './exercise.js';
+import { practice, exam, sameSteno, keySvg } from './exercise.js';
+import { keyLabel, keyExplain, layoutFor } from './steno/keys.js';
 import { StenoPad } from './pad.js';
 import { rank, segmentWords } from './recognizer.js';
 import { speak, canSpeak, listen, canListen, stopSpeaking } from './speech.js';
@@ -51,16 +52,58 @@ function wordCard(word, { scale = 40, note } = {}) {
   return card;
 }
 
-function glyphCard(id, { thick = false } = {}) {
-  const g = GLYPHS[id];
-  const box = h('div', { class: 'wortbild', html: glyphSvg(layoutGlyph(id, { thick }), { scale: 40 }) });
-  const card = h('figure', { class: 'zeichenkarte', tabindex: '0', title: 'Antippen: Schreibrichtung zeigen' }, box, h('figcaption', {}, h('b', {}, g.name), h('small', {}, g.size)));
+// Karte für einen Übungsgegenstand (Zeichen „#b“, Auslautvokal „~e“ oder Wort)
+function keyCard(key, { scale = 40 } = {}) {
+  const box = h('div', { class: 'wortbild', html: keySvg(key, { scale }) });
+  const desc = key.startsWith('#') ? DESC[key.slice(1)] : key.startsWith('~') ? FINAL_DESC[key.slice(1)] : keyExplain(key);
+  const card = h('figure', { class: 'zeichenkarte', tabindex: '0', title: 'Antippen: Schreibrichtung zeigen' }, box, h('figcaption', {}, h('b', {}, keyLabel(key)), desc ? h('small', {}, desc) : null));
   const play = () => {
-    box.innerHTML = glyphSvg(layoutGlyph(id, { thick }), { scale: 40, animate: true });
+    box.innerHTML = keySvg(key, { scale, animate: true });
   };
   card.addEventListener('click', play);
   card.addEventListener('keydown', (e) => (e.key === 'Enter' ? play() : null));
   return card;
+}
+
+function vowelChip(v, anlaut) {
+  const r = VOWEL_RULES[v];
+  const art = [r.shift > 0 ? 'hoch' : r.shift < 0 ? 'tief' : null, r.wide ? 'weit' : 'eng', r.thick ? 'verstärkt' : null].filter(Boolean).join(', ');
+  return h('span', { class: 'verbindung', title: r.label }, h('b', {}, (anlaut ? 'Anlaut ' : '') + v), h('small', {}, art));
+}
+
+// Baukasten: zeigt, aus welchen Zeichen und Verbindungen ein Wort entsteht
+function baukasten(word) {
+  const p = parseWord(word);
+  const parts = [];
+  const glyphBox = (id, label, thick) => h('figure', { class: 'teil' }, h('div', { html: glyphSvg(layoutGlyph(id, { thick }), { scale: 24 }) }), h('figcaption', {}, label));
+  if (p.kuerzel) {
+    parts.push(h('span', { class: 'verbindung' }, h('b', {}, 'Kürzel'), h('small', {}, KUERZEL[p.kuerzel].hint)));
+  } else {
+    p.items.forEach((it, idx) => {
+      if (idx > 0) parts.push(h('span', { class: 'plus', 'aria-hidden': 'true' }, '+'));
+      if (it.final) {
+        parts.push(h('figure', { class: 'teil' }, h('div', { html: keySvg('~' + it.final, { scale: 24 }) }), h('figcaption', {}, `${it.final} am Ende`)));
+        return;
+      }
+      if (it.prefix || it.suffix) {
+        if (it.vowel) parts.push(vowelChip(it.vowel, idx === 0), h('span', { class: 'plus' }, '+'));
+        parts.push(glyphBox(it.g, it.prefix ? `Vorsilbe ${it.prefix}-` : 'Nachsilbe -ung', false));
+        return;
+      }
+      if (it.vowel) parts.push(vowelChip(it.vowel, idx === 0), h('span', { class: 'plus', 'aria-hidden': 'true' }, '+'));
+      else if (idx > 0) parts.push(h('span', { class: 'verbindung leer' }, h('b', {}, '–'), h('small', {}, 'möglichst eng')), h('span', { class: 'plus', 'aria-hidden': 'true' }, '+'));
+      parts.push(glyphBox(it.g, GLYPHS[it.g].name, !!(it.vowel && VOWEL_RULES[it.vowel].thick)));
+    });
+  }
+  const result = h('div', { class: 'wortbild', html: wordSvg(word, { scale: 34 }) });
+  const row = h('div', { class: 'baukasten', tabindex: '0', title: 'Antippen zum Abspielen' }, h('div', { class: 'teile' }, ...parts), h('span', { class: 'gleich', 'aria-hidden': 'true' }, '='), h('figure', { class: 'ergebnisbild' }, result, h('figcaption', {}, h('b', {}, word))));
+  const play = () => {
+    result.innerHTML = wordSvg(word, { scale: 34, animate: true });
+    if (canSpeak()) speak(word, { rate: store.load().einstellungen.tempo });
+  };
+  row.addEventListener('click', play);
+  row.addEventListener('keydown', (e) => (e.key === 'Enter' ? play() : null));
+  return row;
 }
 
 function setTitle(t) {
@@ -116,7 +159,7 @@ const pages = {
             h(
               'ul',
               { class: 'pfeilliste' },
-              h('li', {}, h('a', { href: '#/lektionen' }, '12 Lerneinheiten'), ' mit Lehrstoff, Zeichentafel und Prüfung'),
+              h('li', {}, h('a', { href: '#/lektionen' }, `${LESSONS.length} Lerneinheiten`), ': erst Zeichen lernen, dann daraus Wörter bilden – mit Prüfung'),
               h('li', {}, 'Schreiben mit ', h('b', {}, 'Apple Pencil'), ', ', h('b', {}, 'S-Pen'), ', Finger oder Maus – mit Handballen-Erkennung'),
               h('li', {}, h('a', { href: '#/uebersetzer' }, 'Übertragungsstelle'), ': Text oder Sprache → Kurzschrift'),
               h('li', {}, h('a', { href: '#/lesesaal' }, 'Lesesaal'), ': Kurzschrift → Text'),
@@ -203,26 +246,33 @@ const pages = {
       store.lesson(id).gelesen = true;
     });
     const pool = wordsUpTo(lesson.nr);
+    const drills = drillKeys(lesson);
+    const drillPool = drillKeysUpTo(lesson.nr);
+    // Lernweg: Lehrstoff → Zeichen einzeln üben → Wörter bilden → anwenden → Prüfung
     const tabs = [
       ['lehrstoff', 'Lehrstoff'],
-      ['zeichen', 'Zeichen'],
-      ['nachspuren', 'Nachspuren'],
+      drills.length ? ['zeichen', lesson.kuerzel ? 'Kürzel üben' : 'Zeichen üben'] : null,
+      ['woerter', 'Wörter bilden'],
       ['schreiben', 'Schreiben'],
       ['lesen', 'Lesen'],
       ['diktat', 'Hördiktat'],
       ['pruefung', 'Prüfung'],
-    ];
+    ].filter(Boolean);
+    if (!tabs.some(([k]) => k === tab)) tab = 'lehrstoff';
+    const tabIndex = tabs.findIndex(([k]) => k === tab);
+    const nextTab = tabs[tabIndex + 1];
+    const weiter = nextTab ? h('p', { class: 'weiterzeile' }, h('a', { href: `#/lektion/${id}/${nextTab[0]}`, class: 'knopf primaer' }, `Weiter: Schritt ${tabIndex + 2} – ${nextTab[1]} ▸`)) : null;
     const body = h('div', { class: 'reiterinhalt' });
     const reiter = h(
       'div',
       { class: 'reiter', role: 'tablist' },
-      ...tabs.map(([k, label]) => h('a', { href: `#/lektion/${id}/${k}`, class: k === tab ? 'aktiv' : '', role: 'tab', 'aria-selected': k === tab ? 'true' : 'false' }, label)),
+      ...tabs.map(([k, label], i) => h('a', { href: `#/lektion/${id}/${k}`, class: k === tab ? 'aktiv' : '', role: 'tab', 'aria-selected': k === tab ? 'true' : 'false' }, h('span', { class: 'schrittnr' }, String(i + 1)), label)),
     );
     const prev = LESSONS[lesson.nr - 2];
     const next = LESSONS[lesson.nr];
-    put(main, 
+    put(main,
       fenster(
-        `Lerneinheit ${lesson.nr} · ${lesson.paragraf}`,
+        `Lerneinheit ${lesson.nr} von ${LESSONS.length} · ${lesson.paragraf}`,
         h('h1', {}, lesson.titel),
         reiter,
         body,
@@ -237,48 +287,74 @@ const pages = {
     );
 
     if (tab === 'lehrstoff') {
-      const examples = lesson.woerter.slice(0, 8);
-      add(body, 
+      const neu = [...lesson.zeichen.map((g) => '#' + g), ...(lesson.drill || [])];
+      add(body,
+        h('div', { class: 'lernweg' }, h('b', {}, 'Ihr Lernweg in dieser Einheit: '), tabs.map(([, label], i) => `${i + 1}. ${label}`).join(' → ')),
+        neu.length ? h('h2', {}, 'Neu in dieser Lerneinheit (antippen zeigt die Schreibrichtung)') : null,
+        neu.length ? h('div', { class: 'kartenreihe' }, ...neu.map((k) => keyCard(k))) : null,
+        lesson.kuerzel ? h('h2', {}, 'Neue Kürzel') : null,
+        lesson.kuerzel ? h('div', { class: 'kartenreihe' }, ...lesson.kuerzel.map((k) => wordCard(k, { note: KUERZEL[k]?.hint }))) : null,
         h('div', { class: 'lehrtext', html: lesson.lehrstoff }),
-        h('h2', {}, 'Beispiele (antippen zum Abspielen)'),
-        h('div', { class: 'kartenreihe' }, ...examples.map((w) => wordCard(w, { note: explain(w) }))),
+        lesson.vokale.length ? h('h2', {}, 'Selbstlautregeln dieser Lerneinheit') : null,
+        lesson.vokale.length ? vowelTable(lesson.vokale) : null,
         lesson.saetze ? h('h2', {}, 'Beispielsätze') : null,
         ...(lesson.saetze || []).map((s) => h('div', { class: 'satz' }, h('div', { class: 'satzbild', html: textSvg(s, { scale: 24, maxWidth: 30 }) }), h('div', {}, s, ' ', canSpeak() ? knopf('🔊', () => speak(s), { class: 'klein', 'aria-label': 'Satz vorlesen' }) : ''))),
-        h('p', {}, h('a', { href: `#/lektion/${id}/zeichen`, class: 'knopf primaer' }, 'Weiter zu den Zeichen ▸')),
+        weiter,
       );
     } else if (tab === 'zeichen') {
-      add(body, 
-        lesson.zeichen.length ? h('h2', {}, 'Neue Zeichen') : null,
-        lesson.zeichen.length ? h('div', { class: 'kartenreihe' }, ...lesson.zeichen.map((g) => glyphCard(g))) : null,
-        lesson.vokale.length ? h('h2', {}, 'Selbstlaute dieser Lerneinheit') : null,
-        lesson.vokale.length ? vowelTable(lesson.vokale) : null,
-        lesson.kuerzel ? h('h2', {}, 'Kürzel dieser Lerneinheit') : null,
-        lesson.kuerzel ? h('div', { class: 'kartenreihe' }, ...lesson.kuerzel.map((k) => wordCard(k, { note: KUERZEL[k]?.hint }))) : null,
-        h('p', {}, h('a', { href: `#/lektion/${id}/nachspuren`, class: 'knopf primaer' }, 'Weiter zum Nachspuren ▸')),
+      const host = h('div');
+      add(body,
+        h('p', { class: 'hinweiszeile' }, lesson.kuerzel
+          ? 'Üben Sie die neuen Kürzel einzeln: zuerst nachspuren, dann aus dem Gedächtnis schreiben.'
+          : 'Üben Sie jedes neue Zeichen einzeln: Zuerst spuren Sie die Vorlage nach, danach schreiben Sie das Zeichen aus dem Gedächtnis. Erst wenn die Zeichen sitzen, geht es an die Wörter.'),
+        h('div', { class: 'kartenreihe dicht' }, ...drills.map((k) => keyCard(k, { scale: 30 }))),
+        host,
+        weiter,
       );
-    } else if (['nachspuren', 'schreiben', 'lesen', 'diktat'].includes(tab)) {
+      practice(host, { lesson, type: 'zeichen', keys: drills, pool: drillPool });
+    } else if (tab === 'woerter') {
+      const host = h('div');
+      // Baukasten: vier Beispielwörter mit unterschiedlicher Kurzform
+      const seen = new Set();
+      const bau = lesson.woerter.filter((w) => {
+        const sig = JSON.stringify(parseWord(w).items);
+        if (seen.has(sig)) return false;
+        seen.add(sig);
+        return true;
+      }).slice(0, 4);
+      add(body,
+        h('p', { class: 'hinweiszeile' }, 'Aus den gelernten Zeichen entstehen Wörter. Der Baukasten zeigt, welche Zeichen ein Wort bilden und wie sie verbunden werden. Antippen spielt die Schreibweise ab.'),
+        h('h2', {}, 'Baukasten'),
+        ...bau.map((w) => baukasten(w)),
+        h('h2', {}, 'Alle Wörter dieser Lerneinheit'),
+        h('div', { class: 'kartenreihe' }, ...lesson.woerter.map((w) => wordCard(w, { scale: 32, note: explain(w) }))),
+        h('h2', {}, 'Wörter nachspuren'),
+        host,
+        weiter,
+      );
+      practice(host, { lesson, type: 'nachspuren', pool });
+    } else if (['schreiben', 'lesen', 'diktat'].includes(tab)) {
       const info = {
-        nachspuren: 'Fahren Sie die vorgedruckte Sollform mit Stift oder Finger nach. So prägen Sie sich Form, Größe und Stellung ein.',
         schreiben: 'Schreiben Sie das angegebene Wort in Kurzschrift auf die Linien. Achten Sie auf Größe und Höhe der Zeichen.',
         lesen: 'Lesen Sie die Kurzschrift. Wörter mit gleicher Kurzform (z. B. Beet und Bett) werden gleichermaßen anerkannt.',
         diktat: 'Das Wort wird Ihnen vorgelesen. Schreiben Sie es in Kurzschrift. Die Geschwindigkeit stellen Sie unter „Hilfe & Einstellungen“ ein.',
       }[tab];
       const host = h('div');
-      add(body, h('p', { class: 'hinweiszeile' }, info), host);
+      add(body, h('p', { class: 'hinweiszeile' }, info), host, weiter);
       practice(host, { lesson, type: tab, pool });
     } else if (tab === 'pruefung') {
       const a = store.lesson(id).pruefung;
       const host = h('div');
-      add(body, 
+      add(body,
         h(
           'div',
           { class: 'kasten-grau' },
-          h('p', {}, 'Die Prüfung umfasst ', h('b', {}, '8 Aufgaben'), ' (Schreiben, Lesen, Hördiktat). Zum Bestehen sind mindestens 60 % erforderlich. Hilfen stehen während der Prüfung nicht zur Verfügung.'),
+          h('p', {}, 'Die Prüfung umfasst ', h('b', {}, '8 Aufgaben'), drills.length ? ' (Zeichen, Schreiben, Lesen, Hördiktat)' : ' (Schreiben, Lesen, Hördiktat)', '. Zum Bestehen sind mindestens 60 % erforderlich. Hilfen stehen während der Prüfung nicht zur Verfügung.'),
           a ? h('p', {}, 'Bisheriges Ergebnis: ', h('b', {}, `${a.punkte} von ${a.von} Punkten`), ' ', statusStamp(a.bestanden ? 'bewilligt' : 'offen')) : null,
         ),
         host,
       );
-      add(host, knopf('Prüfungsverfahren eröffnen ▸', () => exam(host, { lesson, pool, onDone: updateSidebar }), { class: 'primaer' }));
+      add(host, knopf('Prüfungsverfahren eröffnen ▸', () => exam(host, { lesson, pool, drills, drillPool, onDone: updateSidebar }), { class: 'primaer' }));
     }
   },
 
@@ -458,7 +534,7 @@ const pages = {
       fenster(
         'Zeichentafel nach § 2 der Systemurkunde (Mitlaute)',
         h('p', {}, 'Alle Mitlautzeichen der Verkehrsschrift in der Reihenfolge der Urkunde. Antippen zeigt die Schreibrichtung.'),
-        h('div', { class: 'kartenreihe dicht' }, ...URKUNDE_ORDER.map((g) => glyphCard(g))),
+        h('div', { class: 'kartenreihe dicht' }, ...URKUNDE_ORDER.map((g) => keyCard('#' + g))),
       ),
       fenster('Selbstlaute nach § 3 (sinnbildliche Darstellung)', vowelTable(Object.keys(VOWEL_RULES))),
       fenster('Kürzel (Auswahl nach § 5)', h('div', { class: 'kartenreihe dicht' }, ...Object.keys(KUERZEL).filter((k) => k !== 'daß').map((k) => wordCard(k, { scale: 34, note: KUERZEL[k].hint })))),
@@ -482,7 +558,7 @@ const pages = {
         h(
           'div',
           { class: 'werkzeug' },
-          alle ? knopf('🏅 Urkunde ausstellen', () => urkunde()) : h('span', { class: 'klein' }, 'Die Urkunde wird nach Bestehen aller 12 Prüfungen ausgestellt.'),
+          alle ? knopf('🏅 Urkunde ausstellen', () => urkunde()) : h('span', { class: 'klein' }, `Die Urkunde wird nach Bestehen aller ${LESSONS.length} Prüfungen ausgestellt.`),
           knopf('🗑 Akte vernichten', () => {
             if (confirm('Soll die Akte einschließlich aller Prüfungsergebnisse unwiderruflich dem Aktenvernichter zugeführt werden?')) {
               store.reset();
@@ -563,7 +639,7 @@ function urkunde() {
       h('h1', {}, 'Urkunde'),
       h('p', {}, 'Hiermit wird bescheinigt, dass'),
       h('p', { class: 'urkunde-name' }, a.name || 'die Inhaberin / der Inhaber dieser Akte'),
-      h('p', {}, 'sämtliche zwölf Lerneinheiten der Verkehrsschrift der Deutschen Einheitskurzschrift erfolgreich bearbeitet und die vorgeschriebenen Prüfungen bestanden hat.'),
+      h('p', {}, `sämtliche ${LESSONS.length} Lerneinheiten der Verkehrsschrift der Deutschen Einheitskurzschrift erfolgreich bearbeitet und die vorgeschriebenen Prüfungen bestanden hat.`),
       h('div', { class: 'urkunde-steno', html: textSvg('Herzlichen Glückwunsch', { scale: 30, maxWidth: 24 }) }),
       h('p', {}, `Aktenzeichen ${a.aktenzeichen} · ausgestellt am ${heute()}`),
       h('div', { class: 'unterschrift' }, stamp('BEURKUNDET', 'blau'), h('div', {}, h('span', { class: 'krakel' }, 'gez. Kürzel'), h('br'), 'Der Kurzschriftbeauftragte')),
@@ -606,4 +682,4 @@ if ('serviceWorker' in navigator && location.protocol !== 'file:') {
 }
 
 // Für Tests und Neugierige
-window.stenoTutor = { parseWord, layoutText, layoutWord };
+window.stenoTutor = { parseWord, layoutText, layoutWord, layoutFor };

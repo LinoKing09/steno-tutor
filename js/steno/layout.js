@@ -174,6 +174,13 @@ export function layoutText(text, { maxWidth = 40, wordGap = 1.1, lineHeight = 4.
   return { lines, lineHeight };
 }
 
+// Buchstäbliches Selbstlautzeichen allein (z. B. das e am Wortende)
+export function layoutFinal(v) {
+  const f = finalVowel(v);
+  const pts = f.pts.map((p) => ({ ...p }));
+  return { strokes: [{ pts, runs: f.thick ? [[0, pts.length - 1, 0.8]] : [] }], bbox: bounds(pts), parse: null, word: v };
+}
+
 // Einzelnes Zeichen der Zeichentafel (ohne Wortlogik)
 export function layoutGlyph(id, { thick = false, level = 0 } = {}) {
   const g = glyph(id);

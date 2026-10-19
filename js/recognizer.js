@@ -3,7 +3,7 @@
 // normierung, weil in der Kurzschrift Größe und Stellung zur Linie bedeutungstragend sind.
 // Toleriert werden kleine Abweichungen in Größe (±25 %) und Höhe (±0,3 Stufen).
 
-import { layoutWord } from './steno/layout.js';
+import { layoutFor } from './steno/keys.js';
 
 const N = 48;
 const SCALES = [0.8, 0.9, 1, 1.12, 1.25];
@@ -94,9 +94,10 @@ function greedyMatch(a, b) {
   return min;
 }
 
+// Sollform eines Übungsgegenstands (Wort, „#Zeichen“ oder „~Auslautvokal“)
 export function templatePoints(word) {
   if (templateCache.has(word)) return templateCache.get(word);
-  const layout = layoutWord(word);
+  const layout = layoutFor(word);
   const pts = resample(layout.strokes.map((s) => s.pts));
   const mx = minX(pts);
   const norm = pts.map((p) => ({ x: p.x - mx, y: p.y }));

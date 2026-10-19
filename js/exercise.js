@@ -6,6 +6,7 @@ import { StenoPad } from './pad.js';
 import { grade } from './recognizer.js';
 import { wordSvg } from './steno/render.js';
 import { explain, parseWord } from './steno/parser.js';
+import { layoutFor, keyLabel, keyExplain, isGlyphKey } from './steno/keys.js';
 import { speak, canSpeak } from './speech.js';
 import * as store from './store.js';
 
@@ -39,16 +40,21 @@ function scoreBar(score) {
   );
 }
 
-function solutionBox(word) {
-  const svg = h('div', { class: 'sollform', html: wordSvg(word, { scale: 54, animate: true }) });
+// Sollform eines Übungsgegenstands (Wort, „#Zeichen“ oder „~Auslautvokal“) als SVG
+export function keySvg(key, opts = {}) {
+  return wordSvg(keyLabel(key), { ...opts, layout: layoutFor(key) });
+}
+
+function solutionBox(key) {
+  const svg = h('div', { class: 'sollform', html: keySvg(key, { scale: 54, animate: true }) });
   return h(
     'div',
     { class: 'loesung' },
-    h('div', { class: 'loesung-kopf' }, 'Sollform für „', h('b', {}, word), '“'),
+    h('div', { class: 'loesung-kopf' }, 'Sollform für „', h('b', {}, keyLabel(key)), '“'),
     svg,
-    h('div', { class: 'zerlegung' }, explain(word)),
+    h('div', { class: 'zerlegung' }, keyExplain(key)),
     knopf('↻ Schreibweise abspielen', () => {
-      svg.innerHTML = wordSvg(word, { scale: 54, animate: true });
+      svg.innerHTML = keySvg(key, { scale: 54, animate: true });
     }, { class: 'klein' }),
   );
 }
@@ -93,7 +99,16 @@ export function renderTask(host, task, ctx) {
     }
 
     // Schreibaufgaben
-    if (task.type === 'nachspuren') {
+    const glyphTask = isGlyphKey(task.word);
+    const label = keyLabel(task.word);
+    if (glyphTask) {
+      add(
+        auftrag,
+        task.type === 'nachspuren' ? 'Spuren Sie das blau vorgedruckte Zeichen nach: ' : 'Schreiben Sie aus dem Gedächtnis das Zeichen: ',
+        h('b', { class: 'zielwort gross' }, label),
+        h('small', {}, keyExplain(task.word)),
+      );
+    } else if (task.type === 'nachspuren') {
       add(auftrag, 'Spuren Sie die blau vorgedruckte Sollform nach: ', h('b', { class: 'zielwort' }, task.word), ' ', sayButton(task.word) || '');
     } else if (task.type === 'schreiben') {
       add(auftrag, 'Übertragen Sie in Kurzschrift: ', h('b', { class: 'zielwort gross' }, task.word), ' ', sayButton(task.word) || '');
@@ -140,7 +155,7 @@ export function renderTask(host, task, ctx) {
                 'p',
                 {},
                 g.confusedWith
-                  ? `Ihre Schrift ähnelt eher dem Wort „${g.confusedWith}“. `
+                  ? `Ihre Schrift ähnelt eher ${isGlyphKey(g.confusedWith) ? 'dem Zeichen' : 'dem Wort'} „${keyLabel(g.confusedWith)}“. `
                   : 'Die Abweichung von der Sollform ist zu groß. ',
                 'Vergleichen Sie mit der rot gestrichelten Sollform im Schreibfeld.',
               ),
@@ -219,27 +234,40 @@ function renderReading(task, ctx, { auftrag, arbeit, werkzeug, ergebnis, finish 
   add(werkzeug, pruefen);
 }
 
-// Endlose Übungsreihe für einen Aufgabentyp
-export function practice(host, { lesson, type, pool }) {
-  const words = lesson.woerter;
+// Endlose Übungsreihe. type „zeichen“: Einzelzeichen, jedes erst nachspuren, dann frei schreiben.
+export function practice(host, { lesson, type, pool, keys = lesson.woerter }) {
   let queue = [];
+  let runde = 0;
   let richtig = 0;
   let gesamt = 0;
+  const nachgespurt = new Set();
   const zaehler = h('div', { class: 'zaehler' });
   const taskHost = h('div');
   put(host, zaehler, taskHost);
   const updateZaehler = () => {
-    put(zaehler, 
+    put(zaehler,
       h('span', {}, `Bearbeitete Vorgänge: ${gesamt}`),
       h('span', {}, `davon anerkannt: ${richtig}`),
       h('span', {}, `Quote: ${gesamt ? Math.round((100 * richtig) / gesamt) : 0} %`),
     );
   };
   const next = async () => {
-    if (!queue.length) queue = shuffle(words);
-    const word = queue.pop();
+    if (!queue.length) {
+      // erste Runde in der Reihenfolge des Lehrstoffs, danach gemischt
+      queue = runde++ === 0 && type === 'zeichen' ? keys.slice().reverse() : shuffle(keys);
+    }
+    const key = queue[queue.length - 1];
+    let taskType = type;
+    if (type === 'zeichen') taskType = nachgespurt.has(key) ? 'schreiben' : 'nachspuren';
     updateZaehler();
-    const res = await renderTask(taskHost, { type, word }, { lessonId: lesson.id, pool, autoplay: gesamt > 0 });
+    const res = await renderTask(taskHost, { type: taskType, word: key }, { lessonId: lesson.id, pool, autoplay: gesamt > 0 });
+    if (type === 'zeichen' && taskType === 'nachspuren' && !res.aufgegeben) {
+      // nach erfolgreichem Nachspuren folgt dasselbe Zeichen aus dem Gedächtnis, sonst noch einmal nachspuren
+      if (res.ok) nachgespurt.add(key);
+    } else {
+      queue.pop();
+      if (type === 'zeichen') nachgespurt.delete(key);
+    }
     if (!res.aufgegeben) {
       gesamt++;
       if (res.ok) richtig++;
@@ -249,11 +277,15 @@ export function practice(host, { lesson, type, pool }) {
   next();
 }
 
-// Prüfung über eine Lerneinheit mit Bescheid
-export function exam(host, { lesson, pool, onDone }) {
+// Prüfung über eine Lerneinheit mit Bescheid: zwei Einzelzeichen (falls vorhanden), dann Wörter
+export function exam(host, { lesson, pool, drills = [], drillPool = [], onDone }) {
   const words = shuffle(lesson.woerter);
-  const plan = ['schreiben', 'lesen', 'schreiben', 'diktat', 'lesen', 'schreiben', 'diktat', 'lesen'];
-  const tasks = plan.map((type, i) => ({ type, word: words[i % words.length] }));
+  const zeichen = shuffle(drills).slice(0, 2);
+  const plan = ['schreiben', 'lesen', 'schreiben', 'diktat', 'lesen', 'schreiben', 'diktat', 'lesen'].slice(zeichen.length);
+  const tasks = [
+    ...zeichen.map((key) => ({ type: 'schreiben', word: key, zeichen: true })),
+    ...plan.map((type, i) => ({ type, word: words[i % words.length] })),
+  ];
   const results = [];
   const run = async (i) => {
     if (i >= tasks.length) {
@@ -268,7 +300,8 @@ export function exam(host, { lesson, pool, onDone }) {
       onDone?.(bestanden);
       return;
     }
-    const res = await renderTask(host, tasks[i], { lessonId: lesson.id, pool, exam: true, position: `${i + 1} von ${tasks.length}`, autoplay: true });
+    const t = tasks[i];
+    const res = await renderTask(host, t, { lessonId: lesson.id, pool: t.zeichen ? drillPool : pool, exam: true, position: `${i + 1} von ${tasks.length}`, autoplay: true });
     results.push(res);
     run(i + 1);
   };
@@ -302,7 +335,7 @@ function bescheid(lesson, punkte, von, bestanden, results) {
       { class: 'amtstabelle' },
       h('tr', {}, h('th', {}, 'Nr.'), h('th', {}, 'Art'), h('th', {}, 'Gegenstand'), h('th', {}, 'Ergebnis')),
       ...results.map((r, i) =>
-        h('tr', {}, h('td', {}, String(i + 1)), h('td', {}, TYPES[r.type].name), h('td', {}, r.word), h('td', {}, r.ok ? 'anerkannt' : 'nicht anerkannt')),
+        h('tr', {}, h('td', {}, String(i + 1)), h('td', {}, isGlyphKey(r.word) ? 'Zeichen' : TYPES[r.type].name), h('td', {}, keyLabel(r.word)), h('td', {}, r.ok ? 'anerkannt' : 'nicht anerkannt')),
       ),
     ),
     h('p', {}, h('b', {}, 'Begründung: '), bestanden
